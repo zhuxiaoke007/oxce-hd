@@ -1,0 +1,23 @@
+{
+  "cmake.generator": "MinGW Makefiles",
+  "cmake.configureSettings": {
+    "DEPS_DIR": "nonexistent",
+    "BUILD_PACKAGE": "OFF",
+    "EXTRA_XCOM_LIBS": ""
+  },
+  "cmake.buildDirectory": "${workspaceFolder}/../build",
+  "cmake.parallelJobs": 0,
+  "cmake.ccompiler": "D:/Tools/msys64/mingw64/bin/gcc.exe",
+  "cmake.cppcompiler": "D:/Tools/msys64/mingw64/bin/g++.exe",
+  "cmake.makePath": "D:/Tools/msys64/mingw64/bin/mingw32-make.exe",
+  "C_Cpp.default.compilerPath": "D:/Tools/msys64/mingw64/bin/g++.exe",
+  "C_Cpp.default.includePath": [
+    "D:/Tools/msys64/mingw64/include/SDL",
+    "D:/Tools/msys64/mingw64/include",
+    "${workspaceFolder}/libs/rapidyaml"
+  ],
+  "files.associations": {
+    "*.h": "cpp",
+    "*.cpp": "cpp"
+  }
+}
