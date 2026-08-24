@@ -106,15 +106,17 @@ public:
 #ifdef __HDFONTS__
 	/// Gets the HD text overlay surface (8-bit, display-sized), or 0 if unavailable.
 	Surface *getTextOverlaySurface() const;
-	/// Integer content scale (display px per base px) of the actual screen.
-	/// This is the true geometric scale and ignores the HD font zoom setting.
-	int getContentScale() const;
-	/// Integer scale used to rasterize HD glyphs: content scale multiplied by
+	/// Real content scale (display px per base px) of the actual screen.
+	/// May be fractional at window sizes that don't divide evenly; this is
+	/// the true geometric scale and ignores the HD font zoom setting.
+	void getContentScale(double &sx, double &sy) const;
+	/// Scale used to rasterize HD glyphs: real content scale multiplied by
 	/// the user's hdFontScale preference (100% = no change). Min 1.
-	int getHdScale() const;
+	double getHdScale() const;
 	/// Maps a base-buffer coordinate to a display coordinate (cell top-left).
-	/// Uses the true content scale so text origin stays aligned with the
-	/// surrounding pixel graphics regardless of the HD font zoom.
+	/// Uses the real (possibly fractional) content scale so text origin stays
+	/// aligned with the surrounding pixel graphics regardless of the HD font
+	/// zoom; the result is rounded to the nearest display pixel.
 	void baseToDisplay(int bx, int by, int &dx, int &dy) const;
 	/// Gates HD overlay stamping for the state currently being blitted. The
 	/// overlay is composited above EVERYTHING, so text of states occluded by

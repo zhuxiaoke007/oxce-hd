@@ -58,7 +58,7 @@ Font::Font() : _monospace(false), _cjkAdvance(-1)
 #ifdef __HDFONTS__
 	_hdFont = 0;
 	_hdFontCjk = 0;
-	_hdScale = 0;
+	_hdScale = 0.0;
 #endif
 }
 
@@ -203,7 +203,7 @@ void Font::invalidateHdCache() const
 		delete kv.second;
 	}
 	_hdGlyphs.clear();
-	_hdScale = 0;
+	_hdScale = 0.0;
 	// Drop both TTF handles so they get reopened (and re-sized) at the
 	// new scale on next use. Sharing _hdScale between the primary and the
 	// CJK fallback means we must reset both here, otherwise the fallback
@@ -250,10 +250,10 @@ void splitTtcSpec(const std::string &spec, std::string &file, int &index)
  * font's line height match the original bitmap font cell scaled up to
  * the given display scale. FreeType metrics scale linearly with the
  * requested point size, so one correction pass is enough.
- * @param scale Display scale factor (integer, display px per base px).
+ * @param scale Display scale factor (display px per base px; may be fractional).
  * @return True if the TTF handle is ready for use.
  */
-bool Font::ensureHdFont(int scale) const
+bool Font::ensureHdFont(double scale) const
 {
 	if (_hdFont != 0 && _hdScale == scale)
 		return true;
@@ -266,7 +266,7 @@ bool Font::ensureHdFont(int scale) const
 	}
 	// Cached glyph cells are sized for the previous scale; drop them.
 	invalidateHdCache();
-	int target = getHeight() * scale; // desired line height in display pixels
+	int target = (int)lround(getHeight() * scale); // desired line height in display pixels
 	if (target < 4)
 		target = 4;
 	std::string file; int index;
@@ -299,10 +299,10 @@ bool Font::ensureHdFont(int scale) const
 /**
  * Opens (or reopens) the optional CJK fallback TTF at the pixel size that
  * matches the original bitmap cell scaled to the given display scale.
- * @param scale Display scale factor.
+ * @param scale Display scale factor (may be fractional).
  * @return True if the CJK handle is ready (or no CJK path is configured).
  */
-bool Font::ensureHdCjkFont(int scale) const
+bool Font::ensureHdCjkFont(double scale) const
 {
 	if (_hdTtfCjkPath.empty())
 		return false;
@@ -313,7 +313,7 @@ bool Font::ensureHdCjkFont(int scale) const
 		TTF_CloseFont(_hdFontCjk);
 		_hdFontCjk = 0;
 	}
-	int target = getHeight() * scale;
+	int target = (int)lround(getHeight() * scale);
 	if (target < 4)
 		target = 4;
 	std::string file; int index;
@@ -350,18 +350,18 @@ bool Font::ensureHdCjkFont(int scale) const
  * The glyph is baseline-aligned inside the cell; coverage is binarized
  * with a 50% threshold.
  * @param c Character to rasterize.
- * @param scale Display scale factor.
+ * @param scale Display scale factor (may be fractional; cells are rounded).
  * @param font TTF handle to render from (primary or CJK fallback).
  * @return Newly created Surface, or nullptr if the glyph can't be rendered
  *         (caller should fall back to the bitmap glyph).
  */
-Surface *Font::rasterizeHdChar(UCode c, int scale, TTF_Font *font) const
+Surface *Font::rasterizeHdChar(UCode c, double scale, TTF_Font *font) const
 {
 	if (!font)
 		return 0;
 	SDL_Rect size = getCharSize(c);
-	int cellW = size.w * scale;
-	int cellH = getHeight() * scale;
+	int cellW = (int)lround(size.w * scale);
+	int cellH = (int)lround(getHeight() * scale);
 	if (cellW <= 0 || cellH <= 0 || !Unicode::isPrintable(c))
 	{
 		return 0;
@@ -410,7 +410,7 @@ Surface *Font::rasterizeHdChar(UCode c, int scale, TTF_Font *font) const
 		// Baseline placement: assume the original bitmap font keeps a
 		// descender of roughly a quarter of the cell height (min 1px).
 		int descentLowres = std::max(1, getHeight() / 4);
-		int cellBaseline = cellH - descentLowres * scale;
+		int cellBaseline = cellH - (int)lround(descentLowres * scale);
 		// The shaded surface's top row corresponds to glyph-space y=ascent,
 		// so an ink pixel at row (minY+r) sits (ascent-(minY+r)) above the baseline.
 		int dstY = cellBaseline - ascent + minY;
@@ -461,11 +461,11 @@ Surface *Font::rasterizeHdChar(UCode c, int scale, TTF_Font *font) const
  *   character, render from it (so Chinese/Kana text isn't missing).
  * - Otherwise return nullptr, and the caller falls back to the bitmap glyph.
  * @param c Character to get.
- * @param scale Display scale factor.
+ * @param scale Display scale factor (may be fractional).
  * @return 8-bit Surface (ink=1, transparent=0) sized advance*scale x height*scale,
  *         or nullptr if the HD backend can't render it (fall back to bitmap).
  */
-Surface *Font::getHdChar(UCode c, int scale) const
+Surface *Font::getHdChar(UCode c, double scale) const
 {
 	if (_hdTtfPath.empty())
 		return 0;

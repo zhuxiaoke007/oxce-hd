@@ -69,18 +69,19 @@ private:
 	/// TTF handle for the CJK fallback font (lazily opened).
 	mutable TTF_Font *_hdFontCjk;
 	/// Scale factor (display/base resolution) the TTFs were opened for.
-	mutable int _hdScale;
+	/// Fractional at window sizes that don't scale by an exact integer.
+	mutable double _hdScale;
 	/// Cache of rasterized HD glyph cells for the current scale (may hold nullptr = fallback).
 	mutable std::unordered_map<UCode, Surface*> _hdGlyphs;
 	/// Font id (e.g. "FONT_BIG"), used to pick a role-appropriate TTF.
 	std::string _id;
 	/// (Re)opens the primary TTF at the pixel size required by the given scale.
-	bool ensureHdFont(int scale) const;
+	bool ensureHdFont(double scale) const;
 	/// (Re)opens the CJK fallback TTF at the pixel size required by the given scale.
-	bool ensureHdCjkFont(int scale) const;
+	bool ensureHdCjkFont(double scale) const;
 	/// Rasterizes a single character into an 8-bit cell using the given handle
 	/// (ink = index 1, transparent = index 0). Returns nullptr if it can't render.
-	Surface *rasterizeHdChar(UCode c, int scale, TTF_Font *font) const;
+	Surface *rasterizeHdChar(UCode c, double scale, TTF_Font *font) const;
 #endif
 	/// Determines the size and position of each character in the font.
 	void init(size_t index, const UString &str);
@@ -114,11 +115,11 @@ public:
 	/// 8-bit surface, width = advance * scale, height = font height * scale,
 	/// ink = index 1, transparent = index 0. Returns nullptr on failure
 	/// (caller should fall back to the bitmap glyph).
-	Surface *getHdChar(UCode c, int scale) const;
+	Surface *getHdChar(UCode c, double scale) const;
 #else
 	/// Stub when built without SDL_ttf.
 	void setId(const std::string &id) { (void)id; }
-	Surface *getHdChar(UCode c, int scale) const { (void)c; (void)scale; return 0; }
+	Surface *getHdChar(UCode c, double scale) const { (void)c; (void)scale; return 0; }
 #endif
 	/// Gets a particular character from the font, with its real size.
 	SurfaceCrop getChar(UCode c) const;

@@ -675,27 +675,31 @@ double Screen::getYScale() const
 
 #ifdef __HDFONTS__
 /**
- * Integer content scale (display pixels per base-buffer pixel) used to
- * size and place HD text glyphs. Assumes a uniform (keep-aspect) scale;
- * non-integer display scales are rounded to the nearest integer.
+ * Real content scale (display pixels per base-buffer pixel), per axis.
+ * The framebuffer upscale (Zoom::flipWithZoom) maps base pixels with these
+ * exact fractional factors, so HD text must be placed with them too.
+ * Rounding to an integer here would make text drift away from buttons and
+ * panels at window sizes whose scale isn't an exact integer multiple
+ * (e.g. 800x600 -> 2.5x). Assumes uniform (keep-aspect) scaling; without it
+ * the average of both axes is what getHdScale uses for glyph sizing.
  */
-int Screen::getContentScale() const
+void Screen::getContentScale(double &sx, double &sy) const
 {
-	double sx = (getWidth() - _leftBlackBand - _rightBlackBand) / (double)_baseWidth;
-	double sy = (getHeight() - _topBlackBand - _bottomBlackBand) / (double)_baseHeight;
-	int s = (int)lround((sx + sy) / 2.0);
-	return s < 1 ? 1 : s;
+	sx = (getWidth() - _leftBlackBand - _rightBlackBand) / (double)_baseWidth;
+	sy = (getHeight() - _topBlackBand - _bottomBlackBand) / (double)_baseHeight;
+	if (sx < 1.0) sx = 1.0;
+	if (sy < 1.0) sy = 1.0;
 }
 
-int Screen::getHdScale() const
+double Screen::getHdScale() const
 {
-	int s = getContentScale();
-#ifdef __HDFONTS__
+	double sx, sy;
+	getContentScale(sx, sy);
+	double s = (sx + sy) / 2.0;
 	int zoom = Options::hdFontScale;
 	if (zoom < 100) zoom = 100;
-	s = (int)lround(s * (double)zoom / 100.0);
-#endif
-	return s < 1 ? 1 : s;
+	s = s * (double)zoom / 100.0;
+	return s < 1.0 ? 1.0 : s;
 }
 
 /**
@@ -711,9 +715,10 @@ int Screen::getHdScale() const
  */
 void Screen::baseToDisplay(int bx, int by, int &dx, int &dy) const
 {
-	int s = getContentScale();
-	dx = _leftBlackBand + bx * s;
-	dy = _topBlackBand + by * s;
+	double sx, sy;
+	getContentScale(sx, sy);
+	dx = (int)lround(_leftBlackBand + bx * sx);
+	dy = (int)lround(_topBlackBand + by * sy);
 }
 
 /**

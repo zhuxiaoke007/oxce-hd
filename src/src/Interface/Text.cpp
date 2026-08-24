@@ -619,7 +619,7 @@ void Text::draw()
 	// HD (TTF) text overlay: when enabled, glyphs are rasterized at display
 	// resolution onto the Screen overlay instead of this low-res surface.
 	Screen *hdScreen = 0;
-	int hdScale = 1;
+	double hdScale = 1.0;
 	double hdZoom = 1.0;
 	bool hdActive = false;
 #ifdef __HDFONTS__
