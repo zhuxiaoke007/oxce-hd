@@ -721,6 +721,34 @@ void Screen::baseToDisplay(int bx, int by, int &dx, int &dy) const
 	dy = (int)lround(_topBlackBand + by * sy);
 }
 
+void Screen::clearTextOverlayRect(int bx, int by, int bw, int bh)
+{
+	if (!_hdOverlayActive || !_textOverlay || !Options::hdFonts || useOpenGL())
+		return;
+	double sx, sy;
+	getContentScale(sx, sy);
+	int x0 = (int)floor(_leftBlackBand + bx * sx);
+	int y0 = (int)floor(_topBlackBand + by * sy);
+	int x1 = (int)ceil(_leftBlackBand + (bx + bw) * sx);
+	int y1 = (int)ceil(_topBlackBand + (by + bh) * sy);
+	SDL_Surface *ov = _textOverlay->getSurface();
+	if (SDL_LockSurface(ov) != 0)
+		return;
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 > ov->w) x1 = ov->w;
+	if (y1 > ov->h) y1 = ov->h;
+	if (x1 > x0 && y1 > y0)
+	{
+		Uint8 *row = (Uint8*)ov->pixels + y0 * ov->pitch;
+		for (int y = y0; y < y1; ++y, row += ov->pitch)
+		{
+			memset(row + x0, 0, x1 - x0);
+		}
+	}
+	SDL_UnlockSurface(ov);
+}
+
 /**
  * Returns the HD text overlay surface, or 0 if unavailable.
  */

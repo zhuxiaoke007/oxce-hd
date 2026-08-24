@@ -71,6 +71,12 @@ public:
 	void popup();
 	/// Draws the window.
 	void draw() override;
+	/// Blits the window. Under HD fonts this first erases overlay ink inside
+	/// the window bounds, because the opaque window background is only drawn
+	/// into the framebuffer; glyphs stamped earlier in the frame (from
+	/// widgets behind the window) would otherwise show through the popup
+	/// once the text overlay gets composited on top of everything.
+	void blit(SDL_Surface *surface) override;
 	/// sets the X delta.
 	void setDX(int dx);
 	/// sets the Y delta.

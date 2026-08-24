@@ -23,6 +23,9 @@
 #include "../Engine/Timer.h"
 #include "../Engine/Sound.h"
 #include "../Engine/RNG.h"
+#ifdef __HDFONTS__
+#include "../Engine/Screen.h"
+#endif
 
 namespace OpenXcom
 {
@@ -266,6 +269,27 @@ void Window::draw()
 		crop.setY(square.y);
 		crop.blit(this);
 	}
+}
+
+void Window::blit(SDL_Surface *surface)
+{
+	if (_visible && !_hidden)
+	{
+#ifdef __HDFONTS__
+		// The opaque background is drawn into the framebuffer only; erase
+		// overlay glyphs inside the window bounds so the composite on top of
+		// the framebuffer shows exactly what the window covers. Glyphs of the
+		// window's own contents are re-stamped afterwards (they blit later in
+		// the frame), so they stay visible. clearTextOverlayRect re-checks
+		// the HD option/overlay availability itself.
+		Screen *hdScreen = Screen::getActiveScreen();
+		if (hdScreen)
+		{
+			hdScreen->clearTextOverlayRect(getX(), getY(), getWidth(), getHeight());
+		}
+#endif
+	}
+	Surface::blit(surface);
 }
 
 /**

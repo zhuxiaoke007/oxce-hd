@@ -118,6 +118,12 @@ public:
 	/// aligned with the surrounding pixel graphics regardless of the HD font
 	/// zoom; the result is rounded to the nearest display pixel.
 	void baseToDisplay(int bx, int by, int &dx, int &dy) const;
+	/// Erases HD overlay ink in the given base-buffer rectangle. Opaque
+	/// popup/window backgrounds are drawn into the framebuffer only, so
+	/// glyphs that were stamped onto the overlay earlier in the frame
+	/// (e.g. an underlying list) would otherwise "shine through" the popup
+	/// when the overlay is composited on top of everything.
+	void clearTextOverlayRect(int bx, int by, int bw, int bh);
 	/// Gates HD overlay stamping for the state currently being blitted. The
 	/// overlay is composited above EVERYTHING, so text of states occluded by
 	/// states above must not go there — Game disables the overlay for those,
