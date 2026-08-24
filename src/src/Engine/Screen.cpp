@@ -17,6 +17,9 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Screen.h"
+#ifdef _WIN32
+#include "Win32Ime.h"
+#endif
 #include "../resource.h"
 #include <algorithm>
 #include <sstream>
@@ -532,6 +535,12 @@ void Screen::resetDisplay(bool resetVideo, bool noShaders)
 			}
 		}
 		Log(LOG_INFO) << "Display set to " << getWidth() << "x" << getHeight() << "x" << (int)_screen->format->BitsPerPixel << ".";
+
+#ifdef _WIN32
+		// Install the IME bridge on the freshly created SDL window (and
+		// re-install it after SDL recreates the window on display resets).
+		Win32Ime::attach();
+#endif
 
 #ifdef __HDFONTS__
 		// (Re)allocate the HD text overlay to match the display size.

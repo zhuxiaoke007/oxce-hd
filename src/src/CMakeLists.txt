@@ -158,6 +158,7 @@ set ( engine_src
   Engine/Options.cpp
   Engine/Palette.cpp
   Engine/RNG.cpp
+  Engine/Win32Ime.cpp
   Engine/Scalers/hq2x.cpp
   Engine/Scalers/hq3x.cpp
   Engine/Scalers/hq4x.cpp
@@ -622,7 +623,7 @@ endif ()
 
 if (WIN32)
   set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-all-symbols)
-  set(WIN32_LIBS imagehlp dbghelp)
+  set(WIN32_LIBS imagehlp dbghelp imm32)
 endif(WIN32)
 
 target_link_libraries ( openxcom ${system_libs} ${PKG_DEPS_LDFLAGS} ${EXTRA_XCOM_LIBS} ${WIN32_LIBS} )
