@@ -417,10 +417,25 @@ Surface *Font::rasterizeHdChar(UCode c, double scale, TTF_Font *font) const
 		// CJK ideographs: keep the glyph's natural horizontal position from
 		// the TTF (the shaded surface is advance-wide and the em equals the
 		// uniform cell), so inter-character spacing comes from the font's
-		// own metrics instead of ink-width jitter. Latin glyphs keep the
-		// ink-cropped placement to stay tight in their narrow cells.
-		int srcX0 = isCjkIdeograph(c) ? 0 : minX;
-		int copyW = isCjkIdeograph(c) ? std::min(shaded->w, cellW) : inkW;
+		// own metrics instead of ink-width jitter. Latin glyphs rendered
+		// from the CJK face (mixed "5分钟"-style lines) are CENTERED in
+		// their bitmap-advance cell: the ink no longer hugs the left edge,
+		// so the gaps between digits and hanzi match the hanzi-hanzi gaps.
+		// Latin glyphs from the primary face keep the ink-cropped placement
+		// to stay tight in their narrow cells.
+		bool fromCjkFace = (font == _hdFontCjk);
+		int placedW = (isCjkIdeograph(c) || fromCjkFace) ? std::min(shaded->w, cellW) : inkW;
+		int placeX = 0;
+		if (isCjkIdeograph(c))
+		{
+			placeX = 0;
+		}
+		else if (fromCjkFace)
+		{
+			placeX = (cellW - placedW) / 2;
+		}
+		int srcX0 = (isCjkIdeograph(c) || fromCjkFace) ? 0 : minX;
+		int copyW = placedW;
 		{
 			static bool inkDiagLogged = false;
 			if (!inkDiagLogged)
@@ -438,7 +453,7 @@ Surface *Font::rasterizeHdChar(UCode c, double scale, TTF_Font *font) const
 			{
 				if (row[srcX0 + x] >= 128)
 				{
-					int px = x, py = dstY + r;
+					int px = x + placeX, py = dstY + r;
 					if (px >= 0 && px < cellW && py >= 0 && py < cellH)
 						cell->setPixel(px, py, 1);
 				}
@@ -462,16 +477,22 @@ Surface *Font::rasterizeHdChar(UCode c, double scale, TTF_Font *font) const
  * - Otherwise return nullptr, and the caller falls back to the bitmap glyph.
  * @param c Character to get.
  * @param scale Display scale factor (may be fractional).
+ * @param preferCjk When true, render Latin/digits from the CJK fallback face
+ *        too (if available) so their height matches neighboring hanzi; used
+ *        for geo-font lines that mix CJK with digits (e.g. "5分钟"). False
+ *        keeps the monospaced primary face (pure-ASCII lines like globe
+ *        coordinates stay column-aligned).
  * @return 8-bit Surface (ink=1, transparent=0) sized advance*scale x height*scale,
  *         or nullptr if the HD backend can't render it (fall back to bitmap).
  */
-Surface *Font::getHdChar(UCode c, double scale) const
+Surface *Font::getHdChar(UCode c, double scale, bool preferCjk) const
 {
 	if (_hdTtfPath.empty())
 		return 0;
 	if (!ensureHdFont(scale))
 		return 0;
-	auto it = _hdGlyphs.find(c);
+	uint64_t key = ((uint64_t)c << 1) | (preferCjk ? 1u : 0u);
+	auto it = _hdGlyphs.find(key);
 	if (it != _hdGlyphs.end())
 		return it->second;
 
@@ -481,12 +502,13 @@ Surface *Font::getHdChar(UCode c, double scale) const
 	// designs its Latin/digits to match the CJK ideographs, so mixed
 	// CJK+digit text keeps a uniform visual size. Mixing the Latin-only
 	// primary (Arial: small x-height) with the CJK face made digits ~60% of
-	// the hanzi height. Geo fonts keep the monospaced primary (digit columns).
+	// the hanzi height. Geo fonts keep the monospaced primary for pure-ASCII
+	// lines (digit columns), except when the line itself contains CJK.
 	bool geoFont = _id.rfind("FONT_GEO", 0) == 0;
-	bool preferCjk = !geoFont && !_hdTtfCjkPath.empty();
+	bool useCjk = !geoFont || preferCjk;
 	// TTF_GlyphIsProvided takes a 16-bit char, so only probe for BMP codepoints.
 	bool primaryHas = (c <= 0xFFFF) ? (TTF_GlyphIsProvided(_hdFont, (Uint16)c) != 0) : true;
-	if (preferCjk && ensureHdCjkFont(scale) && (c > 0xFFFF || TTF_GlyphIsProvided(_hdFontCjk, (Uint16)c)))
+	if (useCjk && ensureHdCjkFont(scale) && (c > 0xFFFF || TTF_GlyphIsProvided(_hdFontCjk, (Uint16)c)))
 	{
 		src = _hdFontCjk;
 	}
@@ -509,7 +531,7 @@ Surface *Font::getHdChar(UCode c, double scale) const
 				<< " cell=" << (glyph ? glyph->getWidth() : -1) << "x" << (glyph ? glyph->getHeight() : -1);
 		}
 	}
-	_hdGlyphs[c] = glyph; // cache failures too, so we don't re-render every frame
+	_hdGlyphs[key] = glyph; // cache failures too, so we don't re-render every frame
 	return glyph;
 }
 

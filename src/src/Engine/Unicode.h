@@ -51,7 +51,19 @@ namespace Unicode
 	/// Checks if a character is a blank space (includes non-breaking spaces).
 	inline bool isSpace(UCode c) { return (c == ' ' || c == TOK_NBSP); }
 	/// Checks if a character is a word separator.
-	inline bool isSeparator(UCode c) { return (c == '-' || c == '/'); }
+	/// Includes CJK punctuation so unwrapped Chinese text keeps a usable
+	/// break point (word-wrap can then restart the word measurement after
+	/// ，。；：、！？() and similar marks).
+	inline bool isSeparator(UCode c)
+	{
+		return (c == '-' || c == '/'
+			|| c == 0x3001 || c == 0x3002   // 、 。
+			|| c == 0xFF0C || c == 0xFF1B   // ， ；
+			|| c == 0xFF1A || c == 0xFF01 || c == 0xFF1F // ： ！ ？
+			|| c == 0xFF08 || c == 0xFF09   // （ ）
+			|| c == 0x300A || c == 0x300B   // 《 》
+			|| c == 0x300C || c == 0x300D); // 「 」
+	}
 	/// Checks if a character is visible to the user.
 	inline bool isPrintable(UCode c) { return (c > 32 && c != TOK_NBSP); }
 

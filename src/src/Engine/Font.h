@@ -72,7 +72,10 @@ private:
 	/// Fractional at window sizes that don't scale by an exact integer.
 	mutable double _hdScale;
 	/// Cache of rasterized HD glyph cells for the current scale (may hold nullptr = fallback).
-	mutable std::unordered_map<UCode, Surface*> _hdGlyphs;
+	/// Keyed by (codepoint, source-preference) so a glyph rendered from the
+	/// CJK face next to hanzi isn't confused with the same glyph rendered
+	/// from the primary face in a pure-ASCII context.
+	mutable std::unordered_map<uint64_t, Surface*> _hdGlyphs;
 	/// Font id (e.g. "FONT_BIG"), used to pick a role-appropriate TTF.
 	std::string _id;
 	/// (Re)opens the primary TTF at the pixel size required by the given scale.
@@ -115,11 +118,13 @@ public:
 	/// 8-bit surface, width = advance * scale, height = font height * scale,
 	/// ink = index 1, transparent = index 0. Returns nullptr on failure
 	/// (caller should fall back to the bitmap glyph).
-	Surface *getHdChar(UCode c, double scale) const;
+	/// @param preferCjk Prefer the CJK fallback face for this glyph (used when
+	/// the surrounding line contains CJK text, so digits/heights stay uniform).
+	Surface *getHdChar(UCode c, double scale, bool preferCjk) const;
 #else
 	/// Stub when built without SDL_ttf.
 	void setId(const std::string &id) { (void)id; }
-	Surface *getHdChar(UCode c, double scale) const { (void)c; (void)scale; return 0; }
+	Surface *getHdChar(UCode c, double scale, bool preferCjk) const { (void)c; (void)scale; (void)preferCjk; return 0; }
 #endif
 	/// Gets a particular character from the font, with its real size.
 	SurfaceCrop getChar(UCode c) const;

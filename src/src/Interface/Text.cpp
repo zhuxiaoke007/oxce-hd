@@ -449,7 +449,16 @@ void Text::processText()
 			// and then re-wrap the same word on the next line, growing `str`
 			// without bound. When the word can't fit on any line we just let
 			// it overflow rather than spinning forever.
-			if (_wrap && width >= getWidth() && (!start || _lang->getTextWrapping() == WRAP_LETTERS) && word < getWidth())
+			// CJK text contains no spaces (its punctuation isn't a wrap
+			// separator either), so the "word" of a whole sentence outgrows
+			// the column even though WRAP_LETTERS could legally break at any
+			// glyph. Allow breaks in WRAP_LETTERS mode as long as dropping
+			// the current glyph still leaves less than a full line; the
+			// single-glyph-wider-than-column case keeps the guard (width >
+			// charWidth) so the loop always advances.
+			bool lettersBreak = (_lang->getTextWrapping() == WRAP_LETTERS) && (width > charWidth);
+			if (_wrap && width >= getWidth() && (!start || _lang->getTextWrapping() == WRAP_LETTERS)
+				&& (word < getWidth() || lettersBreak))
 			{
 				size_t indentLocation = c;
 				if (_lang->getTextWrapping() == WRAP_WORDS || Unicode::isSpace(str[c]))
@@ -684,6 +693,24 @@ void Text::draw()
 	// Invert text by inverting the font palette on index 3 (font palettes use indices 1-5)
 	int mid = _invert ? 3 : 0;
 
+	// Per line: does the line contain CJK (or any non-Latin) glyph? Geo-font
+	// lines that mix digits with hanzi (e.g. "5分钟") should render their
+	// digits from the CJK face too so glyph heights stay uniform; pure-ASCII
+	// lines (globe coordinates, dates) keep the monospaced primary face.
+	UString::const_iterator lineStart = s.begin();
+	bool lineCjk = false;
+	auto computeLineCjk = [&s](const UString::const_iterator &begin) -> bool {
+		for (UString::const_iterator it = begin; it != s.end(); ++it)
+		{
+			if (Unicode::isLinebreak(*it))
+				return false;
+			if (*it > 0x7F)
+				return true;
+		}
+		return false;
+	};
+	lineCjk = computeLineCjk(lineStart);
+
 	// Draw each letter one by one
 	for (UString::const_iterator c = s.begin(); c != s.end(); ++c)
 	{
@@ -696,6 +723,8 @@ void Text::draw()
 			line++;
 			y += font->getCharSize(*c).h;
 			x = getLineX(line);
+			lineStart = c + 1;
+			lineCjk = computeLineCjk(lineStart);
 			if (*c == Unicode::TOK_NL_SMALL)
 			{
 				font = _small;
@@ -752,7 +781,7 @@ void Text::draw()
 #ifdef __HDFONTS__
 			if (hdActive && font->isHdFont())
 			{
-				Surface *glyph = font->getHdChar(*c, hdScale);
+				Surface *glyph = font->getHdChar(*c, hdScale, lineCjk);
 				if (glyph)
 				{
 					static bool hdDiagLogged = false;
