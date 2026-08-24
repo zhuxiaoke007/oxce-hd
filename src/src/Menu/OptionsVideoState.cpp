@@ -95,11 +95,33 @@ OptionsVideoState::OptionsVideoState(OptionsOrigin origin) : OptionsBaseState(or
 	}
 	else
 	{
+		// SDL_ListModes can fail on some Windows display configurations
+		// (high-DPI / multi-monitor). Fall back to a built-in list so the
+		// resolution arrows stay visible and usable instead of being hidden.
+		static SDL_Rect builtin[] = {
+			{0, 0, 640, 400}, {0, 0, 800, 500}, {0, 0, 1024, 640},
+			{0, 0, 1280, 800}, {0, 0, 1600, 1000}, {0, 0, 1920, 1200},
+			{0, 0, 2560, 1440}, {0, 0, 3840, 2160}
+		};
+		const int builtinCount = (int)std::size(builtin);
+		static std::vector<SDL_Rect*> ptrs;
+		ptrs.clear();
+		for (int k = 0; k < builtinCount; ++k) ptrs.push_back(&builtin[k]);
+		ptrs.push_back((SDL_Rect*)0);
+		_res = &ptrs[0];
 		_resCurrent = -1;
-		_resAmount = 0;
-		_btnDisplayResolutionDown->setVisible(false);
-		_btnDisplayResolutionUp->setVisible(false);
-		Log(LOG_WARNING) << "Couldn't get display resolutions";
+		for (int i = 0; _res[i]; ++i)
+		{
+			if (_resCurrent == -1 &&
+				((_res[i]->w == Options::displayWidth && _res[i]->h <= Options::displayHeight) || _res[i]->w < Options::displayWidth))
+			{
+				_resCurrent = i;
+			}
+		}
+		if (_resCurrent == -1)
+			_resCurrent = builtinCount - 1;
+		_resAmount = builtinCount;
+		Log(LOG_WARNING) << "Couldn't get display resolutions, using built-in list";
 	}
 
 	add(_displaySurface);
